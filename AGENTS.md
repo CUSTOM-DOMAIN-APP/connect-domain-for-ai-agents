@@ -4,13 +4,13 @@ Instructions for AI coding agents working with this repository or implementing c
 
 ## What this is
 
-CustomDomain (customdomain.ai) is managed infrastructure that lets a platform's users connect their own domain with the least effort their DNS provider allows: provider detection, automatic DNS configuration, and automatic SSL/TLS issuance and renewal. 63 DNS and registrar providers are catalogued; 25 of them have an automatic path (17 via a user-supplied API token, 6 via one-click OAuth, 2 via Domain Connect), and the remaining 38 use a guided flow with automatic verification. So one-click covers 8 of the 63, not all of them. The live breakdown is public at https://api.customdomain.ai/v1/providers/census.
+CustomDomain™ (customdomain.ai) is managed infrastructure that lets a platform's users connect their own domain with the least effort their DNS provider allows: provider detection, automatic DNS configuration, and automatic SSL/TLS issuance and renewal. 63 DNS and registrar providers are catalogued; 25 of them have an automatic path (17 via a user-supplied API token, 6 via one-click OAuth, 2 via Domain Connect), and the remaining 38 use a guided flow with automatic verification. So one-click covers 8 of the 63, not all of them. The live breakdown is public at https://api.customdomain.ai/v1/providers/census.
 
 There is no separate ownership-challenge step and no TXT challenge record. Control of the zone is proven by the rail itself: an OAuth authorization, a one-click setup apply, or a scoped API token. On the manual rail the poller waits for the pointing records to appear in public DNS.
 
 ## Connection statuses
 
-`pending` -> `propagating` -> `live`, plus `failed`. A `propagating` connection whose records never resolve within 24 hours goes `failed` with `error_code: propagation_timeout`; a manual connection whose records are never added goes `failed` with `setup_incomplete` after 72 hours. Both clear automatically if the connection later verifies. Do not invent other state names. Reference: https://docs.customdomain.ai/docs/concepts/connections
+`pending` -> `propagating` -> `live`, plus `failed`. A `propagating` connection whose records never resolve within 24 hours goes `failed` with `error_code: propagation_timeout`, and a rail that rejects the write also fails the connection. A manual connection never fails on its own: after 72 hours in `pending` it stays `pending` with `error_code: setup_incomplete` as a diagnosis and is re-checked every six hours until the records appear. A `failed` connection is revived by `:recheck`, by re-creating it, or by traffic reaching the edge for the host. Do not invent other state names. Reference: https://docs.customdomain.ai/docs/concepts/connections
 
 ## Connect a domain in 3 steps (REST)
 
@@ -44,13 +44,13 @@ Endpoint shapes here are abbreviated; always follow https://docs.customdomain.ai
 
 ## MCP server (for agents)
 
-Hosted MCP endpoint: `https://mcp.customdomain.ai/mcp` (streamable HTTP, OAuth client credentials via `https://mcp.customdomain.ai/token`). Twelve tools: search and register domains, create, re-apply and disconnect connections, detect the DNS provider, configure email and forwarding, inventory connections, and check verification and TLS status. No tool accepts raw DNS records as input; record values are computed by the control plane from vetted templates.
+Hosted MCP endpoint: `https://mcp.customdomain.ai/mcp` (streamable HTTP, OAuth client credentials via `https://mcp.customdomain.ai/token`). Server `customdomain-mcp` version 0.4.0, protocol revision `2025-06-18`. Twelve tools: search and register domains, create, re-apply and disconnect connections, detect the DNS provider, configure email and forwarding, inventory connections, and check connection and order status. No tool accepts raw DNS records as input; record values are computed by the control plane from vetted templates.
 
 ```bash
 claude mcp add --transport http customdomain https://mcp.customdomain.ai/mcp
 ```
 
-`check-connection-status` reports the MCP job vocabulary (`pending`, `propagating`, `completed`, `failed`, `error`, `expired`), which is one word off from the REST `status` field: `completed` there is `live` here. Branch on the vocabulary of whichever surface you called rather than normalizing by hand.
+`check-connection-status` returns the connection's REST `status` unchanged (`pending`, `propagating`, `live`, `failed`) plus a boolean `connected`. Key completion off `connected: true`. `check-order-status` reports a domain order's states, which are a separate vocabulary from a connection's.
 
 Registry name: `ai.customdomain/mcp`.
 
@@ -65,11 +65,12 @@ Source: https://github.com/CUSTOM-DOMAIN-APP/customdomain-mcp
 - Widget install and embed: https://docs.customdomain.ai/docs/widget-sdk/installation-and-embed
 - Webhook events and signing: https://docs.customdomain.ai/docs/webhooks/overview
 - Sign up (free tier): https://app.customdomain.ai/signup
+- Questions this file does not answer: connect@customdomain.ai
 
 ## Conventions for edits in this repo
 
-Markdown only. No em dashes or en dashes anywhere. Plain, technically accurate language. American English. Keep files under 300 KB.
+Markdown only. Plain, technically accurate language. American English. Keep files under 300 KB. No em dashes or en dashes anywhere: use a period, comma, colon, semicolon or parentheses instead, and write ranges with "to".
 
-The brand is **CustomDomain**, one word. "Custom Domain" with a space is the generic category. Never rename a machine-readable identifier (package names, Domain Connect provider and service ids, URL paths) to match.
+The product name is **CustomDomain™**: one word, capital C and D, with the ™. "custom domain" in lowercase is the generic thing a customer connects. Never rename a machine-readable identifier (package names such as `customdomain-js`, Domain Connect provider and service ids, URL paths) to match the brand form.
 
 Numbers are load-bearing here. Do not write "25+" or "more than 25": the census returns exactly 25 providers with an automatic path. Do not attach 63 to an automatic verb; 63 is the catalogued total, 38 of which are guided manual. Plan prices and quotas come from https://api.customdomain.ai/v1/plans, not from memory. Check any product claim against https://docs.customdomain.ai/docs before publishing it.

@@ -21,7 +21,7 @@ The transferable lesson for agent builders: move security from runtime authoriza
 
 ## How a managed connection layer applies this to agents
 
-[CustomDomain](https://customdomain.ai) applies the same philosophy across its [API](https://customdomain.ai/custom-domain-api) and [hosted MCP server](https://customdomain.ai/mcp-server), extended across 63 catalogued providers through one-click provider authorization, scoped API tokens, and guided manual flows:
+[CustomDomain™](https://customdomain.ai) applies the same philosophy across its [API](https://customdomain.ai/custom-domain-api) and [hosted MCP server](https://customdomain.ai/mcp-server), extended across 63 catalogued providers through one-click provider authorization, scoped API tokens, and guided manual flows:
 
 | Design choice | What it prevents |
 |---|---|
@@ -67,8 +67,8 @@ Two things worth knowing before you design around them. Delegated agent tokens (
 
 ## Attribution
 
-The description of template vetting and token scoping in this document draws on the [knowledge base of the Domain Connect project](https://github.com/Domain-Connect/knowledge-base), published under CC0 1.0. The Domain Connect protocol is third-party prior art; CustomDomain's mechanism is one-click provider authorization, which covers more providers than the protocol alone. To be exact about that claim: of the 63 catalogued providers, 2 are reachable through provider-hosted Domain Connect and 6 through direct OAuth into the provider, so the one-click set is 8, larger than the Domain Connect set on its own but far from the whole catalog.
+The description of template vetting and token scoping in this document draws on the [knowledge base of the Domain Connect project](https://github.com/Domain-Connect/knowledge-base), published under CC0 1.0. The Domain Connect protocol is third-party prior art; CustomDomain™'s mechanism is one-click provider authorization, which covers more providers than the protocol alone. To be exact about that claim: of the 63 catalogued providers, 2 are reachable through provider-hosted Domain Connect and 6 through direct OAuth into the provider, so the one-click set is 8, larger than the Domain Connect set on its own but far from the whole catalog.
 
 ---
 
-Previous: [Programmatic domain connection over REST](03-programmatic-domain-connection-api.md) · Back to the [overview](../README.md) · Product context: [CustomDomain for AI agents](https://customdomain.ai/for/ai-agents), [docs](https://docs.customdomain.ai/docs), [free signup](https://app.customdomain.ai/signup)
+Previous: [Programmatic domain connection over REST](03-programmatic-domain-connection-api.md) · Back to the [overview](../README.md) · Product context: [CustomDomain™ for AI agents](https://customdomain.ai/for/ai-agents), [docs](https://docs.customdomain.ai/docs), [free signup](https://app.customdomain.ai/signup)

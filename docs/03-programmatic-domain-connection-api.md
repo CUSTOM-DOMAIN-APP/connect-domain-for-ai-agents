@@ -1,6 +1,6 @@
 # Programmatic Domain Connection: The REST Flow End to End
 
-When your agent product runs a server-side provisioning pipeline, the natural integration is HTTP, not tool calls. This document walks the full domain connection lifecycle over the [CustomDomain REST API](https://customdomain.ai/custom-domain-api): create a connection, read the authoritative record set, get the records applied through a rail, watch propagation, handle failure, and get notified when the domain goes live. The complete reference is at [docs.customdomain.ai](https://docs.customdomain.ai/docs), and the served OpenAPI 3.1 spec is at [api.customdomain.ai/v1/openapi.json](https://api.customdomain.ai/v1/openapi.json).
+When your agent product runs a server-side provisioning pipeline, the natural integration is HTTP, not tool calls. This document walks the full domain connection lifecycle over the [CustomDomain™ REST API](https://customdomain.ai/custom-domain-api): create a connection, read the authoritative record set, get the records applied through a rail, watch propagation, handle failure, and get notified when the domain goes live. The complete reference is at [docs.customdomain.ai](https://docs.customdomain.ai/docs), and the served OpenAPI 3.1 spec is at [api.customdomain.ai/v1/openapi.json](https://api.customdomain.ai/v1/openapi.json).
 
 ## The resource model
 
@@ -13,7 +13,7 @@ Connections move through exactly four statuses.
 | `pending` | Created; records not yet written or not yet observed | Surface the next human action if the chosen rail needs one |
 | `propagating` | Records were written by a rail and are being checked against public DNS | Wait; poll or subscribe to `connection.live` |
 | `live` | Every desired record resolves to its intended value; the edge serves TLS for the host | Report success, store the connection id |
-| `failed` | Records never appeared inside the window: 24 hours from `propagating` on an automatic rail, 72 hours from `pending` on manual | Read `error_code`, surface the concrete fix, then `POST /v1/connections/{id}:recheck` |
+| `failed` | Records a rail wrote never resolved within 24 hours of `propagating`, or the rail rejected the write. A manual connection never times out into this state | Read `error_code`, surface the concrete fix, then `POST /v1/connections/{id}:recheck` |
 
 There is no separate verification status, because there is no separate ownership challenge. Control of the zone is proven by the rail that wrote the records, or in the manual case by the records appearing at all. See [Connections](https://docs.customdomain.ai/docs/concepts/connections).
 
@@ -142,12 +142,12 @@ One caveat on the drift events specifically: they are produced by an hourly Moni
 
 This is the part most integration guides skip, including earlier revisions of this one.
 
-A connection is marked `failed` when its records never appear inside the window. On an automatic rail that is 24 hours from `propagating`, because a write that the provider accepted should resolve long before then. On a manual connection it is 72 hours from `pending`, which is long enough for a human to get to it. The connection then carries `error_code` and `error_message`.
+A connection is marked `failed` when records a rail wrote never resolve within 24 hours of `propagating`, because a write that the provider accepted should resolve long before then, or when the rail rejects the write. A manual connection is never failed for being late: after 72 hours in `pending` it stays `pending`, gains `error_code: setup_incomplete` as a diagnosis, and is re-checked every six hours until the records appear. A failed connection carries `error_code` and `error_message`.
 
 | `error_code` | What actually happened | What to tell the user |
 |---|---|---|
-| `setup_incomplete` | A manual connection's records were never added | Re-render the record set and ask again. Nothing is broken |
-| `propagation_timeout` | Records were written but never resolved | Usually the wrong zone, a conflicting record, or an overwrite. Check `records_conflicts` from `domains:check` |
+| `setup_incomplete` | A manual connection's records have not appeared after 72 hours. The connection stays `pending` and keeps being re-checked | Re-render the record set and ask again. Nothing is broken |
+| `propagation_timeout` | Records were written but never resolved | Usually the wrong zone, a conflicting record, or an overwrite. Check `record_conflicts` from `domains:check` |
 | `apex_not_supported` | The provider cannot host a CNAME-like record at the zone root | Use a subdomain, or move DNS to a provider with ALIAS/ANAME support |
 | `domain_already_connected` | The hostname is attached elsewhere | Disconnect the other connection first |
 | `dns_write_failed`, `ProviderAuthenticationError` | The foreground apply through a token or OAuth failed at the provider | Re-authorize, or supply a token with DNS scope |

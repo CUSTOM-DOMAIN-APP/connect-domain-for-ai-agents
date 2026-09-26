@@ -1,6 +1,6 @@
 # An MCP Server for Domains: Search, Register, Connect, and Secure
 
-The Model Context Protocol (MCP) is the standard for giving AI agents tools they can call directly. This document describes what a hosted MCP server for the domain lifecycle exposes, using the [CustomDomain MCP server](https://customdomain.ai/mcp-server) as the concrete example: domain search and registration, connection, propagation status, email routing, and forwarding, all as first-class tools an agent can call without wrapper code.
+The Model Context Protocol (MCP) is the standard for giving AI agents tools they can call directly. This document describes what a hosted MCP server for the domain lifecycle exposes, using the [CustomDomain™ MCP server](https://customdomain.ai/mcp-server) as the concrete example: domain search and registration, connection, propagation status, email routing, and forwarding, all as first-class tools an agent can call without wrapper code.
 
 ## Endpoint and authentication
 
@@ -10,7 +10,7 @@ The server is hosted; there is nothing to run or deploy on your side. It is list
 |---|---|
 | Endpoint | `https://mcp.customdomain.ai/mcp` |
 | Transport | Streamable HTTP, JSON-RPC 2.0 |
-| Server identity | `customdomain-mcp`, protocol revision `2025-06-18`, advertises only the `tools` capability |
+| Server identity | `customdomain-mcp` version 0.4.0, protocol revision `2025-06-18`, advertises only the `tools` capability |
 | Auth, option 1 | API key from the console (`sk_live_...` or `sk_test_...`), scoped to one application |
 | Auth, option 2 | OAuth client credentials: exchange an application id and client secret for a short-lived JWT |
 | Auth, option 3 | The `mcp-remote` shortcut form `CLIENT_ID:CLIENT_SECRET`, which the server exchanges for a JWT on the fly |
@@ -101,19 +101,19 @@ A typical "make it live on a real domain" exchange, as tool calls:
 1. `search-domain-availability` for `acmebakery.com`. Taken. `generate-domain-suggestions` returns available alternatives; the user picks one.
 2. `create-domain-order`. The order waits on the purchase-authorization callback; the user approves. `check-order-status` confirms completion.
 3. Nothing to connect by hand. A domain registered this way has its zone created pointing at the edge, so the connection starts propagating immediately.
-4. `check-connection-status` until the job reports `completed`.
+4. `check-connection-status` until it returns `connected: true` (status `live`).
 
 For a domain the user already owns, step 3 is the interesting one: `discover-provider` fingerprints the DNS host and reports which rails are available, then `connect-domain` returns a `link` the agent hands to the user and a `jobId` the agent polls. Behind that link the flow takes the best rail available at that provider: one-click authorization (typically about 30 seconds to live), a scoped API token, or guided manual where the records are rendered and a poller waits for them. `check-connection-status` returns the same vocabulary in all three cases, so the agent's control flow does not care which rail ran. If the user fixes something on their side, `reapply-connection` re-pushes a managed connection without starting over.
 
-### Status vocabulary, and the one place it differs from REST
+### Status vocabulary
 
-`check-connection-status` reports the job vocabulary: `pending`, `propagating`, `completed`, `failed`, `error`, `expired`. The REST `status` field on a connection reports `pending`, `propagating`, `live`, `failed`. They are the same lifecycle with one word different: the MCP job's `completed` is the connection's `live`. If your agent reads both surfaces, branch on the vocabulary of whichever one you called rather than normalizing them by hand and getting it backwards. The REST lifecycle, including the `error_code` values on a failure, is documented in [Programmatic domain connection over REST](03-programmatic-domain-connection-api.md).
+`check-connection-status` returns the connection's REST `status` unchanged: `pending`, `propagating`, `live`, or `failed`. Alongside it comes a boolean `connected`, which is the reliable completion signal, so key the agent's "done" branch off `connected: true` rather than the string. `check-order-status` is the one tool with a different vocabulary, because it reports a domain order, not a connection. The REST lifecycle, including the `error_code` values on a failure, is documented in [Programmatic domain connection over REST](03-programmatic-domain-connection-api.md).
 
 ## Why hosted MCP instead of custom wrappers
 
 You could wrap the [REST API](03-programmatic-domain-connection-api.md) in your own function-calling schema, and for backend pipelines that is often right. The hosted MCP server earns its place when the agent is the caller: tool descriptions, input schemas, and status semantics are maintained server-side and improve without you redeploying anything, and any MCP-capable client (Claude Code, Claude Desktop, Cursor, or your own product's agent runtime) gets the whole surface from one config block.
 
-The honest counter-case: the MCP surface is deliberately narrower than the REST API. Twelve intent-shaped tools against 67 paths means several things are simply not reachable over MCP, including webhook registration, the `/v1/ssl*` certificate-management surface, the `/v1/connections/{id}/power*` reverse-proxy surface, `POST /v1/monitor:check`, and the integrator-supplied record set at `PUT /v1/connections/{id}/records`. If your pipeline needs those, it needs HTTP, and mixing the two is fine: both hit the same control plane and the same connection ids.
+The honest counter-case: the MCP surface is deliberately narrower than the REST API. Twelve intent-shaped tools against 68 paths (counted 2026-09-26) means several things are simply not reachable over MCP, including webhook registration, the `/v1/ssl*` certificate-management surface, the `/v1/connections/{id}/power*` reverse-proxy surface, `POST /v1/monitor:check`, and the integrator-supplied record set at `PUT /v1/connections/{id}/records`. If your pipeline needs those, it needs HTTP, and mixing the two is fine: both hit the same control plane and the same connection ids.
 
 Discovery metadata for agents is published, though not all of it on the MCP host. The agent index is at [docs.customdomain.ai/docs/llms.txt](https://docs.customdomain.ai/docs/llms.txt), the OpenAPI 3.1 description of the REST API is served at [api.customdomain.ai/v1/openapi.json](https://api.customdomain.ai/v1/openapi.json), and the MCP host serves OAuth metadata at `https://mcp.customdomain.ai/.well-known/oauth-authorization-server`. The MCP host does not serve an `/llms.txt` of its own; if you have seen us claim otherwise, use the docs URL above.
 
