@@ -21,13 +21,13 @@ The transferable lesson for agent builders: move security from runtime authoriza
 
 ## How a managed connection layer applies this to agents
 
-[CustomDomain™](https://customdomain.ai) applies the same philosophy across its [API](https://customdomain.ai/custom-domain-api) and [hosted MCP server](https://customdomain.ai/mcp-server), extended across 63 catalogued providers through one-click provider authorization, scoped API tokens, and guided manual flows:
+[CustomDomain™](https://customdomain.ai) applies the same philosophy across its [API](https://customdomain.ai/custom-domain-api) and [hosted MCP server](https://customdomain.ai/mcp-server), extended across 178 catalogued providers through one-click provider authorization, scoped API tokens, and guided manual flows:
 
 | Design choice | What it prevents |
 |---|---|
 | **No raw DNS write tool on the MCP server.** Record names and values are computed server-side from vetted per-provider templates | A prompt-injected agent cannot express "point this domain at attacker infrastructure." The worst available outcome of a bad tool call is a failed connection |
 | **Credentials stay with the DNS provider.** One-click authorization means the user approves a scoped change inside their provider's own authenticated session, and the OAuth callback writes with a one-time token that is never persisted | The agent, and your platform, never see registrar logins at all |
-| **Scoped, revocable platform keys.** The agent holds an application-scoped API key or a short-lived OAuth client-credentials JWT, auditable per call | Blast radius is one application's connections; rotation is a console action, not a customer password reset |
+| **Scoped, revocable platform credentials.** The agent holds a delegated agent token carrying only the scopes a person approved, or a short-lived client-credentials JWT for one application, auditable per call | Blast radius is the approved scopes, or one application's connections; revocation is a console action, not a customer password reset. A workspace API key reaches every application, so keep it out of agents that can use either of the first two |
 | **Control is proven by the rail, and nothing serves before it resolves.** A hostname reaches the edge only once its records resolve to their expected values in public DNS | No agent can attach a domain its user does not control; hosts whose records do not resolve never reach the edge and never receive a certificate |
 | **Fail-closed purchases.** Domain orders require an explicit authorization callback before completing, and the checkout captures the card only after registration succeeds | An autonomous agent cannot spend money without a human or an explicit policy hook approving, and a failed registration releases the authorization rather than charging for nothing |
 | **Tenancy is derived from the credential, never from a parameter.** Cross-tenant ids return `404`, never another tenant's data | One tenant cannot enumerate or touch another's connections by guessing ids |
@@ -63,11 +63,11 @@ A managed layer removes the sharpest risks, but a few practices remain on your s
 
 ## What is not built
 
-Two things worth knowing before you design around them. Delegated agent tokens (short-lived ES256 tokens verified against the control plane's JWKS and scope-enforced per tool, for a human owner delegating access to an agent) exist in the MCP server and are not enabled on the hosted service; until they are, use an application-scoped API key or the client-credentials JWT. And SSO and SCIM are not built, and no plan tier grants them, regardless of what older marketing copy may say.
+Two things worth knowing before you design around them. SSO and SCIM are not built, and no plan tier grants them, regardless of what older marketing copy may say. And purchases through MCP are off on the hosted service: `create-domain-order` exists, but the purchase route behind it is switched off there, so an agent cannot spend money through it today. Delegated agent tokens (short-lived ES256 tokens verified against the control plane's JWKS and scope-enforced per tool, for a human owner delegating access to an agent), which an earlier version of this page listed here, are now live on the hosted service.
 
 ## Attribution
 
-The description of template vetting and token scoping in this document draws on the [knowledge base of the Domain Connect project](https://github.com/Domain-Connect/knowledge-base), published under CC0 1.0. The Domain Connect protocol is third-party prior art; CustomDomain™'s mechanism is one-click provider authorization, which covers more providers than the protocol alone. To be exact about that claim: of the 63 catalogued providers, 2 are reachable through provider-hosted Domain Connect and 6 through direct OAuth into the provider, so the one-click set is 8, larger than the Domain Connect set on its own but far from the whole catalog.
+The description of template vetting and token scoping in this document draws on the [knowledge base of the Domain Connect project](https://github.com/Domain-Connect/knowledge-base), published under CC0 1.0. The Domain Connect protocol is third-party prior art; CustomDomain™'s mechanism is one-click provider authorization, which covers more providers than the protocol alone. To be exact about that claim: of the 178 catalogued providers, 1 is reachable through provider-hosted Domain Connect and 6 through direct OAuth into the provider, so the one-click set is 7, larger than the Domain Connect set on its own but far from the whole catalog.
 
 ---
 
