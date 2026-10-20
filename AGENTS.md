@@ -4,7 +4,7 @@ Instructions for AI coding agents working with this repository or implementing c
 
 ## What this is
 
-CustomDomain™ (customdomain.ai) is managed infrastructure that lets a platform's users connect their own domain with the least effort their DNS provider allows: provider detection, automatic DNS configuration, and automatic SSL/TLS issuance and renewal. 63 DNS and registrar providers are catalogued; 25 of them have an automatic path (17 via a user-supplied API token, 6 via one-click OAuth, 2 via Domain Connect), and the remaining 38 use a guided flow with automatic verification. So one-click covers 8 of the 63, not all of them. The live breakdown is public at https://api.customdomain.ai/v1/providers/census.
+CustomDomain™ (customdomain.ai) is managed infrastructure that lets a platform's users connect their own domain with the least effort their DNS provider allows: provider detection, automatic DNS configuration, and automatic SSL/TLS issuance and renewal. 178 DNS and registrar providers are catalogued; 62 of them have an automatic path (55 via a user-supplied API token, 6 via one-click OAuth, 1 via Domain Connect), and the remaining 116 use a guided flow with automatic verification. So one-click covers 7 of the 178, not all of them. The live breakdown is public at https://api.customdomain.ai/v1/providers/census.
 
 There is no separate ownership-challenge step and no TXT challenge record. Control of the zone is proven by the rail itself: an OAuth authorization, a one-click setup apply, or a scoped API token. On the manual rail the poller waits for the pointing records to appear in public DNS.
 
@@ -44,7 +44,7 @@ Endpoint shapes here are abbreviated; always follow https://docs.customdomain.ai
 
 ## MCP server (for agents)
 
-Hosted MCP endpoint: `https://mcp.customdomain.ai/mcp` (streamable HTTP, OAuth client credentials via `https://mcp.customdomain.ai/token`). Server `customdomain-mcp` version 0.4.0, protocol revision `2025-06-18`. Twelve tools: search and register domains, create, re-apply and disconnect connections, detect the DNS provider, configure email and forwarding, inventory connections, and check connection and order status. No tool accepts raw DNS records as input; record values are computed by the control plane from vetted templates.
+Hosted MCP endpoint: `https://mcp.customdomain.ai/mcp` (streamable HTTP; an API key, OAuth client credentials via `https://mcp.customdomain.ai/token`, or a delegated agent token a person approves over OAuth at `https://api.customdomain.ai`). Server `customdomain-mcp` version 0.5.0, protocol revision `2025-06-18`. Seventeen tools: search domains and suggest names, register them (off on the hosted service), create, re-apply, recheck and disconnect connections, detect the DNS provider, diagnose a connection record by record, read its certificate, configure email and forwarding, inventory connections and orders, check billing standing, and check connection and order status. Each tool needs one scope: `domains:read`, `domains:connect`, `domains:disconnect` or `domains:purchase`. No tool accepts raw DNS records as input; record values are computed by the control plane from vetted templates.
 
 ```bash
 claude mcp add --transport http customdomain https://mcp.customdomain.ai/mcp
@@ -64,7 +64,7 @@ Source: https://github.com/CUSTOM-DOMAIN-APP/customdomain-mcp
 - Embeddable widget: https://customdomain.ai/connect-domain-widget
 - Widget install and embed: https://docs.customdomain.ai/docs/widget-sdk/installation-and-embed
 - Webhook events and signing: https://docs.customdomain.ai/docs/webhooks/overview
-- Sign up (free tier): https://app.customdomain.ai/signup
+- Sign up (no card needed; every workspace has a default API key and its first ten domains are free): https://app.customdomain.ai/signup
 - Questions this file does not answer: connect@customdomain.ai
 
 ## Conventions for edits in this repo
@@ -73,4 +73,4 @@ Markdown only. Plain, technically accurate language. American English. Keep file
 
 The product name is **CustomDomain™**: one word, capital C and D, with the ™. "custom domain" in lowercase is the generic thing a customer connects. Never rename a machine-readable identifier (package names such as `customdomain-js`, Domain Connect provider and service ids, URL paths) to match the brand form.
 
-Numbers are load-bearing here. Do not write "25+" or "more than 25": the census returns exactly 25 providers with an automatic path. Do not attach 63 to an automatic verb; 63 is the catalogued total, 38 of which are guided manual. Plan prices and quotas come from https://api.customdomain.ai/v1/plans, not from memory. Check any product claim against https://docs.customdomain.ai/docs before publishing it.
+Numbers are load-bearing here. Do not write "62+" or "more than 62": the census returns exactly 62 providers with an automatic path. Do not attach 178 to an automatic verb; 178 is the catalogued total, 116 of which are guided manual. Plan prices and quotas come from https://api.customdomain.ai/v1/plans, not from memory. Check any product claim against https://docs.customdomain.ai/docs before publishing it.
