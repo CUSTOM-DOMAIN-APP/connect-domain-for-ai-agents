@@ -42,6 +42,7 @@ Agent autonomy is not the goal; correctly placed consent is. The workable patter
 1. **Spending money**: domain purchases pause for explicit approval.
 2. **Granting zone access**: the one-click authorization, or the creation of a scoped DNS token, happens in the user's own provider session, on their screen.
 3. **Destructive changes**: detaching a live domain from a running product is worth a confirmation.
+4. **Moving the nameservers**: this hands the whole domain to another DNS host. The hosted MCP server's `migrate-nameservers` and `rollback-nameservers` take `confirm: true`, sent only after the person agreed, and a delegated agent token cannot choose where the nameservers go.
 
 Everything between those points (provider detection, record computation, propagation polling, certificate issuance, renewal) is safe to automate fully, because none of it can move authority anywhere the user did not approve. This is the same gate structure a careful human passes; the agent just stops skipping steps.
 

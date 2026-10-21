@@ -10,7 +10,7 @@ The server is hosted; there is nothing to run or deploy on your side. It is list
 |---|---|
 | Endpoint | `https://mcp.customdomain.ai/mcp` |
 | Transport | Streamable HTTP, JSON-RPC 2.0 |
-| Server identity | `customdomain-mcp` version 0.5.0, protocol revision `2025-06-18`, advertises only the `tools` capability |
+| Server identity | `customdomain-mcp` version 0.6.0, protocol revision `2025-06-18`, advertises only the `tools` capability |
 | Auth, option 1 | API key from the console (`cd_live_...` or `cd_test_...`; older `sk_live_...` keys keep working), which acts for the whole workspace |
 | Auth, option 2 | OAuth client credentials: exchange an application id and client secret for a JWT that lasts 15 minutes |
 | Auth, option 3 | The `mcp-remote` shortcut form `CLIENT_ID:CLIENT_SECRET`, which the server exchanges for a JWT on the fly |
@@ -29,7 +29,7 @@ For the first three, the server does not validate credentials cryptographically 
 
 ## The tool surface
 
-Seventeen tools cover the lifecycle, registered in a fixed order. Arguments are listed because agent authors need them to write prompts and schemas that do not guess. Each tool needs one scope, which matters when a person approves a delegated agent: `domains:read` looks and changes nothing, `domains:connect` sets a domain up, `domains:disconnect` takes one offline, and `domains:purchase` spends money.
+Twenty tools cover the lifecycle, registered in a fixed order. Arguments are listed because agent authors need them to write prompts and schemas that do not guess. Each tool needs one scope, which matters when a person approves a delegated agent: `domains:read` looks and changes nothing, `domains:connect` sets a domain up, `domains:disconnect` takes one offline, and `domains:purchase` spends money.
 
 | Phase | Tool | Arguments | Scope | What it does |
 |---|---|---|---|---|
@@ -50,12 +50,17 @@ Seventeen tools cover the lifecycle, registered in a fixed order. Arguments are 
 | Route mail and traffic | `add-email` | `{ domain?, connectionId?, provider?, mxHost?, spfInclude?, dkimSelector?, dkimTarget?, dmarcRua? }` | connect | Configure MX, SPF, DKIM and DMARC in one call via server-side templates. `provider` (`google`, `microsoft365`, `zoho`) fills in the standard MX and SPF |
 | | `forward-domain` | `{ target, domain?, connectionId? }` | connect | Permanent 301 forward, via a managed one-click setup flow |
 | Account | `check-billing-status` | none | read | Whether the workspace may connect new domains right now, with the plan and this month's usage |
+| Move nameservers | `migrate-nameservers` | `{ connectionId, confirm, path?, providerAccountId?, target?, nameservers?, zoneReady?, copyReviewed? }` | connect | Move a connected domain's nameservers to the application's DNS host, records copied first, mail included. `confirm: true` only after the person agreed. `target` and `nameservers` are for the platform's own credential; an agent token that sends them is refused |
+| | `check-nameserver-status` | `{ connectionId }` | read | The move's state, the registrar, the old and new nameservers, and the next step for a person; `done` once it is active, failed or rolled back |
+| | `rollback-nameservers` | `{ connectionId, confirm, target? }` | connect | Move them back, to the old nameservers (`previous`) or the registrar's own DNS (`registrar_default`). `confirm: true` |
 
 One design decision matters more than the tool list: **no tool accepts DNS records as input.** Record names and values are computed by the control plane from vetted per-provider templates. An agent can ask for a domain to be connected, or for Google Workspace mail to be configured; it cannot ask for `acmebakery.com` to be pointed at an arbitrary IP through a crafted record. If a prompt injection reaches the agent, the worst available DNS outcome is a failed connection, not a hijacked zone. The full reasoning is in [Security for agent-driven DNS](04-security-for-agent-driven-dns.md).
 
 If you have read older copy of ours describing these tools as "manage DNS records," that description was wrong in a way that matters, because it invites an integrator to build exactly the injection path the design closes.
 
 Purchases are similarly guarded: `create-domain-order` places a paid order only after a successful call to the integrator's purchase-authorization callback. If that callback is not configured, every purchase is denied. That is the safe default, not a bug. On the hosted service the direct purchase route behind the tool is also switched off, so purchases through MCP are off there today; buying a domain is live through the console's checkout.
+
+Moving a domain's nameservers hands the whole domain, mail included, to another DNS host, so it is gated the same way. `migrate-nameservers` and `rollback-nameservers` need `confirm: true`, sent only after the person agreed, and a delegated agent token cannot say where the nameservers go: the application's setting decides. A target naming the agent's own nameservers would otherwise hand the domain over in one call. The agent never sends a registrar key either; the change runs through a connected registrar account, the person's own sign-in, or the person at the registrar.
 
 One more thing worth knowing before you write prompt text: `generate-domain-suggestions` is deterministic, not a model call. Candidates are keyword joins plus a few common affixes, expanded across TLDs by registrar search and filtered to what is actually available. The same keywords always produce the same candidates, which is what makes the tool testable, and also means it will not surprise you with a clever name.
 
@@ -121,7 +126,7 @@ For a domain the user already owns, step 3 is the interesting one: `discover-pro
 
 You could wrap the [REST API](03-programmatic-domain-connection-api.md) in your own function-calling schema, and for backend pipelines that is often right. The hosted MCP server earns its place when the agent is the caller: tool descriptions, input schemas, and status semantics are maintained server-side and improve without you redeploying anything, and any MCP-capable client (Claude Code, Claude Desktop, Cursor, or your own product's agent runtime) gets the whole surface from one config block.
 
-The honest counter-case: the MCP surface is deliberately narrower than the REST API. Seventeen intent-shaped tools against 129 paths (counted 2026-10-20) means several things are simply not reachable over MCP, including webhook registration, the `/v1/ssl*` certificate-management surface, the `/v1/connections/{id}/power*` reverse-proxy surface, `POST /v1/monitor:check`, and the integrator-supplied record set at `PUT /v1/connections/{id}/records`. If your pipeline needs those, it needs HTTP, and mixing the two is fine: both hit the same control plane and the same connection ids.
+The honest counter-case: the MCP surface is deliberately narrower than the REST API. Twenty intent-shaped tools against 138 paths (counted 2026-10-21) means several things are simply not reachable over MCP, including webhook registration, the `/v1/ssl*` certificate-management surface, the `/v1/connections/{id}/power*` reverse-proxy surface, `POST /v1/monitor:check`, and the integrator-supplied record set at `PUT /v1/connections/{id}/records`. If your pipeline needs those, it needs HTTP, and mixing the two is fine: both hit the same control plane and the same connection ids.
 
 Discovery metadata for agents is published, though not all of it on the MCP host. The agent index is at [docs.customdomain.ai/docs/llms.txt](https://docs.customdomain.ai/docs/llms.txt), the OpenAPI 3.1 description of the REST API is served at [api.customdomain.ai/v1/openapi.json](https://api.customdomain.ai/v1/openapi.json), and the MCP host serves OAuth metadata at `https://mcp.customdomain.ai/.well-known/oauth-protected-resource` and its version and tool list at `https://mcp.customdomain.ai/.well-known/agent/mcp.json`. The MCP host does not serve an `/llms.txt` of its own; if you have seen us claim otherwise, use the docs URL above.
 
