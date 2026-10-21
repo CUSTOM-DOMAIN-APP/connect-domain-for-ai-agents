@@ -15,8 +15,8 @@ an app, verify it and get HTTPS, with DNS, verification and TLS handled by the c
 | **What it is** | Implementation guide for connecting a real domain from inside an AI agent |
 | **Who it's for** | Teams building site-generating agents, coding agents with a deploy step, workflow agents |
 | **Live at** | [customdomain.ai/for/ai-agents](https://customdomain.ai/for/ai-agents) · docs at [docs.customdomain.ai](https://docs.customdomain.ai/docs) |
-| **Stack** | Markdown guide · hosted MCP server (version 0.5.0) over streamable HTTP · REST API, OpenAPI 3.1 |
-| **Status** | Maintained · 178 providers, 5 plans and 17 MCP tools re-counted from the live service 2026-10-20 |
+| **Stack** | Markdown guide · hosted MCP server (version 0.6.0) over streamable HTTP · REST API, OpenAPI 3.1 |
+| **Status** | Maintained · 178 providers, 5 plans and 20 MCP tools re-counted from the live service 2026-10-21 |
 
 An agent can generate a codebase, provision infrastructure and deploy a working app in minutes, then stall on
 one step: putting it on a domain the customer already owns. This repository explains what that step actually
@@ -48,7 +48,7 @@ these records." Everything below is about removing it.
 
 ## Quickstart
 
-Give a Claude Code agent the full domain toolset (seventeen tools, streamable HTTP), or drive the same control
+Give a Claude Code agent the full domain toolset (twenty tools, streamable HTTP), or drive the same control
 plane from a backend job. `domain` is the only required field; the edge target comes from the credential.
 
 ```bash
@@ -130,12 +130,12 @@ OAuth, so the credential goes in a header. In the repository's **Settings > Copi
 
 Then add an Agents secret `COPILOT_MCP_CUSTOMDOMAIN_AUTH` whose value is `Bearer ` followed by the API key or
 the `APPLICATION_ID:CLIENT_SECRET` pair. Listing tools keeps the agent away from `disconnect-domain`, which takes
-a domain offline; `"tools": ["*"]` enables every tool without asking.
+a domain offline, and from the nameserver moves; `"tools": ["*"]` enables every tool without asking.
 
 ## What it does
 
 - **Explains the four mechanics** of a connection: routing records, proof of control, TLS issuance, propagation. [docs/01](docs/01-agents-that-ship-websites-need-domains.md)
-- **Documents the seventeen MCP tools**, their arguments and scopes, and config for Claude, Cursor, VS Code and GitHub Copilot. [docs/02](docs/02-mcp-server-for-domains.md)
+- **Documents the twenty MCP tools**, their arguments and scopes, and config for Claude, Cursor, VS Code and GitHub Copilot. [docs/02](docs/02-mcp-server-for-domains.md)
 - **Walks the REST flow end to end** with real request and response shapes and failure handling. [docs/03](docs/03-programmatic-domain-connection-api.md)
 - **Argues the security model**: scoped credentials, human approval points, no registrar passwords. [docs/04](docs/04-security-for-agent-driven-dns.md)
 - **Publishes the numbers with their sources**, so you can re-count them yourself before trusting them.
@@ -182,14 +182,14 @@ clock, so a retry does not immediately re-fail.
 .
 ├── README.md  # the problem, the three rails, the state machine, pricing
 ├── AGENTS.md  # machine-readable brief for coding agents working in this repo
-├── docs/      # 01 where the agent pipeline breaks · 02 the seventeen MCP tools
+├── docs/      # 01 where the agent pipeline breaks · 02 the twenty MCP tools
 │              # 03 the REST flow end to end · 04 credential scoping and approval gates
 └── LICENSE    # MIT
 ```
 
 Markdown only, no build step. Surfaces referenced from here: MCP at `mcp.customdomain.ai/mcp` (registry id
-`ai.customdomain/mcp`), REST at `api.customdomain.ai` (OpenAPI 3.1: 129 paths, 152 operations, counted
-2026-10-20), and the browser widget `customdomain-js` on npm.
+`ai.customdomain/mcp`), REST at `api.customdomain.ai` (OpenAPI 3.1: 138 paths, 161 operations, counted
+2026-10-21), and the browser widget `customdomain-js` on npm.
 
 ## Pricing, and where this loses
 
@@ -231,7 +231,7 @@ here as prior art, not as a product name.
 - [connect-domain-for-agencies](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-agencies): custom domains for agencies, the field guide
 - [connect-domain-for-email-platforms](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-email-platforms): custom sending domains for email platforms, the field guide
 - [connect-domain-for-website-builders](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-website-builders): custom domains for website builders, the field guide
-- [customdomain-mcp](https://github.com/CUSTOM-DOMAIN-APP/customdomain-mcp): the hosted MCP server, its seventeen tools and client configs
+- [customdomain-mcp](https://github.com/CUSTOM-DOMAIN-APP/customdomain-mcp): the hosted MCP server, its twenty tools and client configs
 - [customdomain-sdk](https://github.com/CUSTOM-DOMAIN-APP/customdomain-sdk): the browser SDK `customdomain-js` and the React wrapper `@customdomain/react`
 - [docs](https://github.com/CUSTOM-DOMAIN-APP/docs): the CustomDomain™ documentation source, rendered at [docs.customdomain.ai](https://docs.customdomain.ai/docs)
 - [awesome-custom-domains](https://github.com/CUSTOM-DOMAIN-APP/awesome-custom-domains): the curated list of the category, including the alternatives to this product
