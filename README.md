@@ -1,24 +1,11 @@
-# Custom domains for AI agents: the CustomDomain™ field guide
+# Custom domains for AI agents
 
-Custom domains for AI agents: a hosted MCP server and REST API that let an agent search for a domain, connect it to
-an app, verify it and get HTTPS, with DNS, verification and TLS handled by the control plane.
+A hosted MCP server and REST API that let an agent connect a customer's own domain to the app it built, then
+report when the domain is `live`. No tool accepts raw DNS records, and the agent never holds a registrar password.
 
-**Status:** Maintained guide · live API numbers re-verified on 2026-10-20 · public
+[Custom domains for AI agents on customdomain.ai](https://customdomain.ai/gh/ai-agents) · [The MCP server in the docs](https://docs.customdomain.ai/docs/mcp/overview) · [Start free: first ten domains, no card](https://app.customdomain.ai/signup)
 
-[![docs](https://img.shields.io/badge/docs-docs.customdomain.ai-1c1917?style=flat)](https://docs.customdomain.ai/docs)
-[![license](https://img.shields.io/badge/license-MIT-1c1917?style=flat)](./LICENSE)
-
-[Website](https://customdomain.ai) · [Docs](https://docs.customdomain.ai/docs) · [Console](https://app.customdomain.ai) · [MCP server](https://customdomain.ai/mcp-server) · [For AI agents](https://customdomain.ai/for/ai-agents)
-
-|  |  |
-|---|---|
-| **What it is** | Implementation guide for connecting a real domain from inside an AI agent |
-| **Who it's for** | Teams building site-generating agents, coding agents with a deploy step, workflow agents |
-| **Live at** | [customdomain.ai/for/ai-agents](https://customdomain.ai/for/ai-agents) · docs at [docs.customdomain.ai](https://docs.customdomain.ai/docs) |
-| **Stack** | Markdown guide · hosted MCP server (version 0.6.0) over streamable HTTP · REST API, OpenAPI 3.1 |
-| **Status** | Maintained · 178 providers, 5 plans and 20 MCP tools re-counted from the live service 2026-10-21 |
-
-An agent can generate a codebase, provision infrastructure and deploy a working app in minutes, then stall on
+An agent can generate a codebase, provision infrastructure and deploy a working app, then stall on
 one step: putting it on a domain the customer already owns. This repository explains what that step actually
 requires (DNS records, proof of control, TLS, propagation) and shows the three ways an agent can finish it
 without ever holding a registrar password. It is maintained by [CustomDomain™](https://customdomain.ai), which
@@ -73,7 +60,8 @@ Every client points at the same endpoint, `https://mcp.customdomain.ai/mcp` (str
 console's **API & SDK** page, or an application's `APPLICATION_ID:CLIENT_SECRET` pair. A client that follows
 the server's `401` to its OAuth metadata can instead sign a person in through the browser, and that person
 approves the scopes the agent gets (`domains:read`, `domains:connect`, `domains:disconnect`,
-`domains:purchase`). Keep keys in an environment variable or a secret store, never in a file you commit.
+`domains:purchase`). Buying a domain through MCP is off on the hosted service, whatever the scope. Keep keys in an
+environment variable or a secret store, never in a file you commit.
 
 **Claude Code**:
 
@@ -132,25 +120,24 @@ Then add an Agents secret `COPILOT_MCP_CUSTOMDOMAIN_AUTH` whose value is `Bearer
 the `APPLICATION_ID:CLIENT_SECRET` pair. Listing tools keeps the agent away from `disconnect-domain`, which takes
 a domain offline, and from the nameserver moves; `"tools": ["*"]` enables every tool without asking.
 
-## What it does
+## In this guide
 
 - **Explains the four mechanics** of a connection: routing records, proof of control, TLS issuance, propagation. [docs/01](docs/01-agents-that-ship-websites-need-domains.md)
 - **Documents the twenty MCP tools**, their arguments and scopes, and config for Claude, Cursor, VS Code and GitHub Copilot. [docs/02](docs/02-mcp-server-for-domains.md)
 - **Walks the REST flow end to end** with real request and response shapes and failure handling. [docs/03](docs/03-programmatic-domain-connection-api.md)
 - **Argues the security model**: scoped credentials, human approval points, no registrar passwords. [docs/04](docs/04-security-for-agent-driven-dns.md)
-- **Publishes the numbers with their sources**, so you can re-count them yourself before trusting them.
 
 ## How it works
 
 Records have to reach a DNS zone the agent does not control. There are exactly three rails for that, and every
 domain-connection product reduces to them. The split below is the live census at `GET
-https://api.customdomain.ai/v1/providers/census`, counted 2026-10-20.
+https://api.customdomain.ai/v1/providers/census`, counted 2026-10-30.
 
-| Rail | Providers (of 178) | What the human does | Typical time to live |
-|---|---|---|---|
-| One-click provider authorization | 7 (6 provider OAuth, 1 provider-hosted Domain Connect) | Approves a scoped change inside their own DNS provider session | About 30 seconds |
-| Scoped API token | 55 | Pastes one DNS-scoped token, used once and discarded by default | Minutes |
-| Guided manual with automatic verification | 116 | Copies the exact records; a poller waits for them to resolve | TTL dependent |
+| Rail | Providers (of 189) | What the human does |
+|---|---|---|
+| One-click provider authorization | 7 (6 provider OAuth, 1 provider-hosted Domain Connect) | Approves a scoped change inside their own DNS provider session |
+| Scoped API token | 66 | Pastes one DNS-scoped token, used once and discarded by default |
+| Guided manual with automatic verification | 116 | Copies the exact records. A poller waits for them to resolve |
 
 Guided manual is the largest group, for every vendor in this category, so the quality of that path matters more
 than a coverage headline. Control of the zone is proven by whichever rail wrote the records: no separate TXT
@@ -166,7 +153,7 @@ should branch on all four.
 |---|---|---|
 | `pending` | Created; records not written or not yet observed | Surface the next human action if the rail needs one |
 | `propagating` | Records written, being checked against public DNS by value | Wait. Poll, or subscribe to `connection.live` |
-| `live` | Every record resolves to its intended value; the edge serves TLS | Report success, store the connection id |
+| `live` | Every record resolves to its intended value. On Growth and up, the CustomDomain™ edge serves HTTPS | Report success, store the connection id |
 | `failed` | Records a rail wrote never resolved within 24 hours, or the rail rejected the write | Read `error_code`, fix, `POST /v1/connections/{id}:recheck` |
 
 Only a rail can time out: 24 hours in `propagating` without the records resolving is `failed` with
@@ -176,39 +163,13 @@ appear. Codes seen in practice: `propagation_timeout`, `setup_incomplete`, `apex
 `domain_already_connected`, `dns_write_failed`. `:recheck` re-resolves every record in-request and re-bases the
 clock, so a retry does not immediately re-fail.
 
-## Repository layout
+## Where this loses
 
-```text
-.
-├── README.md  # the problem, the three rails, the state machine, pricing
-├── AGENTS.md  # machine-readable brief for coding agents working in this repo
-├── docs/      # 01 where the agent pipeline breaks · 02 the twenty MCP tools
-│              # 03 the REST flow end to end · 04 credential scoping and approval gates
-└── LICENSE    # MIT
-```
-
-Markdown only, no build step. Surfaces referenced from here: MCP at `mcp.customdomain.ai/mcp` (registry id
-`ai.customdomain/mcp`), REST at `api.customdomain.ai` (OpenAPI 3.1: 138 paths, 161 operations, counted
-2026-10-21), and the browser widget `customdomain-js` on npm.
-
-## Pricing, and where this loses
-
-Read from `GET https://api.customdomain.ai/v1/plans` on 2026-10-20.
-
-| Plan | Price | Connections included | Beyond Connect |
-|---|---|---|---|
-| Starter | $10/mo | 10/yr, 1/month, hard capped | none |
-| Startup | $149/mo | 600/yr, 50/month | none |
-| Growth | $649/mo | 600/yr, 50/month, metered overage | Power (reverse proxy) and Secure (`/v1/ssl*`) |
-| Premium / Enterprise | Contact sales | 12,000/yr | adds Monitor, then white-label |
-
-The self-serve plans start with a 14 day free trial, and a new workspace connects its first ten domains
-without a card. Starter replaced the Free plan on 2026-09-29.
-
-Entri is the established vendor here and the comparison is mixed. Read 2026-08-19, its entry tier is $249/mo for
-the same 600 connections a year, with no free tier. Where Entri is ahead: upstream one-click coverage. In
-[Domain-Connect/Templates](https://github.com/Domain-Connect/Templates), goentri.com ships 77 templates and
-customdomain.ai ships 18 (counted 2026-09-26), the two largest sets. That gap is real and it is theirs.
+Plan prices and allowances are in the facts block below. Entri is the established vendor here and the comparison
+is mixed. Read 2026-08-19, its entry tier is $249/mo for 600 connections a year, with no free tier. Where Entri
+is ahead: upstream one-click coverage. In [Domain-Connect/Templates](https://github.com/Domain-Connect/Templates),
+goentri.com ships 77 templates and customdomain.ai ships 18 (counted 2026-09-26), the two largest sets. That gap
+is real and it is theirs.
 
 ## Limits and known gaps
 
@@ -217,34 +178,46 @@ customdomain.ai ships 18 (counted 2026-09-26), the two largest sets. That gap is
 - **Purchases through MCP are off on the hosted service.** `create-domain-order` is built, but the direct purchase route it calls is switched off there, so it answers `success: false`. Buy in the console, then connect the domain over MCP or REST.
 - **Drift webhooks** (`domain.record_missing`, `domain.record_restored`) are produced by the monitor sweep but not delivered unless a deployment enables them, which the hosted default does not. Use `POST /v1/monitor:check` instead.
 
-## Corrections
+<!-- facts:start -->
+## Facts and sources
 
-Every number here traces to a live endpoint or a public repository, named at the point of use. If one does not,
-that is a bug: open an issue with the file and line.
+Read from the live endpoints on 2026-10-30. Every number in this README traces to a row here or to a source named
+where it is used. If one does not, open an issue with the file and line.
 
-Problem framing draws on the [Domain Connect knowledge base](https://github.com/Domain-Connect/knowledge-base)
-(CC0 1.0); Domain Connect is an open standard maintained by a community across multiple companies, referenced
-here as prior art, not as a product name.
+| Fact | Value | Source |
+|---|---|---|
+| DNS providers known | 189 | [`/v1/providers/census`](https://api.customdomain.ai/v1/providers/census) |
+| Automatic path | 73: 66 by scoped API key, 6 by provider sign-in (OAuth), 1 by one-click setup (Domain Connect) | census `mode` |
+| Exact records and provider steps | 116 | census `mode` |
+| Going live | No TXT ownership record. A domain goes `live` when every record resolves. Statuses: `pending`, `propagating`, `live`, `failed` | [Connections](https://docs.customdomain.ai/docs/concepts/connections) |
+| HTTPS on the CustomDomain™ edge | Growth and up. On Starter and Startup, domains point at your servers and you serve TLS | [`/v1/plans`](https://api.customdomain.ai/v1/plans) |
+| Plans | Starter $10 a month, 10 domains a year, hard cap. Startup $149 a month, 600 a year. Growth $649 a month, 600 a year. Premium and Enterprise by contract, 12,000 a year. 14 day trial on Starter, Startup and Growth | [`/v1/plans`](https://api.customdomain.ai/v1/plans) |
+| Free to start | A new workspace connects its first ten domains free. No card needed to sign up | [Plans and quotas](https://docs.customdomain.ai/docs/billing/plans-and-quotas) |
+| REST API | 163 operations on 140 paths, OpenAPI 3.1.0 | [`/v1/openapi.json`](https://api.customdomain.ai/v1/openapi.json) |
+| MCP server | `customdomain-mcp` 0.6.0, 20 tools. Buying a domain through MCP is off on the hosted service | [`mcp.json`](https://mcp.customdomain.ai/.well-known/agent/mcp.json) |
+
+Check the provider split yourself:
+
+```sh
+curl -s https://api.customdomain.ai/v1/providers/census \
+  | python3 -c 'import json,sys,collections; d=json.load(sys.stdin); print(d["count"], collections.Counter(p["mode"] for p in d["providers"]))'
+# 189 Counter({'manual': 116, 'api': 66, 'oauth': 6, 'dc': 1})
+```
+<!-- facts:end -->
 
 ## Related
 
-- [connect-domain-for-agencies](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-agencies): custom domains for agencies, the field guide
-- [connect-domain-for-email-platforms](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-email-platforms): custom sending domains for email platforms, the field guide
-- [connect-domain-for-website-builders](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-website-builders): custom domains for website builders, the field guide
 - [customdomain-mcp](https://github.com/CUSTOM-DOMAIN-APP/customdomain-mcp): the hosted MCP server, its twenty tools and client configs
-- [customdomain-sdk](https://github.com/CUSTOM-DOMAIN-APP/customdomain-sdk): the browser SDK `customdomain-js` and the React wrapper `@customdomain/react`
-- [docs](https://github.com/CUSTOM-DOMAIN-APP/docs): the CustomDomain™ documentation source, rendered at [docs.customdomain.ai](https://docs.customdomain.ai/docs)
-- [awesome-custom-domains](https://github.com/CUSTOM-DOMAIN-APP/awesome-custom-domains): the curated list of the category, including the alternatives to this product
+- [connect-domain-for-website-builders](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-website-builders): the field guide for the publish flow an agent's app usually ends in
+- [awesome-custom-domains](https://github.com/CUSTOM-DOMAIN-APP/awesome-custom-domains): the curated list of the category, including other domain MCP servers
 
-## Support
+## Support and license
 
-- **Docs:** [docs.customdomain.ai](https://docs.customdomain.ai/docs)
-- **Questions and ideas:** [GitHub Discussions](https://github.com/CUSTOM-DOMAIN-APP/docs/discussions)
-- **Bugs and corrections:** [open an issue](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-ai-agents/issues) on this repository
-- **Service status:** [status.customdomain.ai](https://status.customdomain.ai)
-- **Account and billing:** connect@customdomain.ai
-- **Security:** report privately to security@customdomain.ai, never in a public issue. Policy: [app.customdomain.ai/security](https://app.customdomain.ai/security)
+Problem framing draws on the [Domain Connect knowledge base](https://github.com/Domain-Connect/knowledge-base) (CC0 1.0).
 
-## License
+Questions go to [GitHub Discussions](https://github.com/CUSTOM-DOMAIN-APP/docs/discussions) and corrections to
+[this repository's issues](https://github.com/CUSTOM-DOMAIN-APP/connect-domain-for-ai-agents/issues). Account and billing:
+connect@customdomain.ai. Report security issues privately to security@customdomain.ai, never in a public issue
+([policy](https://app.customdomain.ai/security)).
 
 [MIT](./LICENSE). CustomDomain™ is a product of EverJust Company.
