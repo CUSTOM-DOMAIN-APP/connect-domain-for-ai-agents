@@ -1,9 +1,10 @@
-# Custom domains for AI agents
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/media/customdomain-mark-dark.png"><img src=".github/media/customdomain-mark.png" alt="CustomDomain" width="56"></picture></p>
+<h1 align="center">Custom domains for AI agents</h1>
+<p align="center"><b>How an agent connects a customer's own domain to the app it built, then reports when it is live.</b></p>
+<p align="center"><a href="https://docs.customdomain.ai/docs/getting-started/quickstart"><img src="https://img.shields.io/badge/docs-quickstart-1c1917?style=flat" alt="docs"></a> <a href="https://customdomain.ai"><img src="https://img.shields.io/badge/website-customdomain.ai-1c1917?style=flat" alt="website"></a> <a href="https://www.producthunt.com/products/custom-domain"><img src="https://img.shields.io/badge/Product%20Hunt-CustomDomain-1c1917?style=flat&logo=producthunt&logoColor=white" alt="Product Hunt"></a></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/media/widget-flow-dark.png"><img src=".github/media/widget-flow-light.png" alt="The CustomDomain widget: your user types their domain, signs in at their provider, and it goes live" width="860"></picture></p>
 
-A hosted MCP server and REST API that let an agent connect a customer's own domain to the app it built, then
-report when the domain is `live`. No tool accepts raw DNS records, and the agent never holds a registrar password.
-
-[Custom domains for AI agents on customdomain.ai](https://customdomain.ai/gh/ai-agents) · [The MCP server in the docs](https://docs.customdomain.ai/docs/mcp/overview) · [Start free: first ten domains, no card](https://app.customdomain.ai/signup)
+CustomDomain is now built for software products that let their users connect a domain. Start here: [Quickstart](https://docs.customdomain.ai/docs/getting-started/quickstart).
 
 An agent can generate a codebase, provision infrastructure and deploy a working app, then stall on
 one step: putting it on a domain the customer already owns. This repository explains what that step actually
